@@ -37,6 +37,7 @@
 #include <cctype>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <regex>
 #include <string>
 #include <vector>
@@ -139,6 +140,115 @@ Keyword keywordFromString(const std::string& keyword) {
     return Keyword::Unknown;
 }
 
+const std::map<Type, std::vector<Keyword>> AcceptedKeywords = {
+    {
+        Type::Article,
+        {   
+            Keyword::Author, Keyword::Title,  Keyword::Journal, Keyword::Year, 
+            Keyword::Volume, Keyword::Number, Keyword::Pages,   Keyword::Month,
+            Keyword::Note,   Keyword::Key
+        }
+    },
+    {
+        Type::Book,
+        {
+            Keyword::Title,   Keyword::Publisher, Keyword::Year,   Keyword::Author,
+            Keyword::Editor,  Keyword::Volume,    Keyword::Number, Keyword::Series,
+            Keyword::Address, Keyword::Edition,   Keyword::Month,  Keyword::Note,
+            Keyword::Key,     Keyword::Url
+        }
+    },
+    {
+        Type::Booklet,
+        {
+            Keyword::Title, Keyword::Author, Keyword::HowPublished, Keyword::Address, 
+            Keyword::Month, Keyword::Year,   Keyword::Note,         Keyword::Key,
+        }
+    },
+    {
+        Type::InBook,
+        {
+            Keyword::Title,     Keyword::Publisher, Keyword::Year,  Keyword::Author,
+            Keyword::Editor,    Keyword::Chapter,   Keyword::Pages, Keyword::Volume,   
+            Keyword::Number,    Keyword::Series,    Keyword::Type,  Keyword::Address,
+            Keyword::Edition,   Keyword::Month,     Keyword::Note,  Keyword::Key
+        }
+    },
+    {
+        Type::InCollection,
+        {
+            Keyword::Author,  Keyword::Title,   Keyword::BookTitle, Keyword::Publisher,
+            Keyword::Year,    Keyword::Editor,  Keyword::Volume,    Keyword::Number,   
+            Keyword::Series,  Keyword::Type,    Keyword::Chapter,   Keyword::Pages,
+            Keyword::Address, Keyword::Edition, Keyword::Month,     Keyword::Note,
+            Keyword::Key
+        }
+    },
+    {
+        Type::InProceedings,
+        {
+            Keyword::Author,    Keyword::Title,   Keyword::BookTitle, Keyword::Year,
+            Keyword::Editor,    Keyword::Volume,  Keyword::Number,    Keyword::Series,
+            Keyword::Pages,     Keyword::Address, Keyword::Month,   Keyword::Organization,
+            Keyword::Publisher, Keyword::Note,    Keyword::Key
+        }
+    },
+    {
+        Type::Manual,
+        {
+            Keyword::Title,   Keyword::Author, Keyword::Organization, Keyword::Address,
+            Keyword::Edition, Keyword::Month,  Keyword::Year,         Keyword::Note,
+            Keyword::Key
+        }
+    },
+    {
+        Type::MastersThesis,
+        {
+            Keyword::Author, Keyword::Title,   Keyword::School, Keyword::Year,
+            Keyword::Type,   Keyword::Address, Keyword::Month,  Keyword::Note,
+            Keyword::Key
+        }
+    },
+    {
+        Type::Misc,
+        {
+            Keyword::Author, Keyword::Title, Keyword::HowPublished, Keyword::Month,
+            Keyword::Year,   Keyword::Note,  Keyword::Key
+        }
+    },
+    {
+        Type::PhDThesis,
+        {
+            Keyword::Author, Keyword::Title, Keyword::School, Keyword::Year,
+            Keyword::Type,   Keyword::Address, Keyword::Month,  Keyword::Note,
+            Keyword::Key
+        }
+    },
+    {
+        Type::Proceedings,
+        {
+            Keyword::Title,    Keyword::Year,          Keyword::Editor,  Keyword::Volume,
+            Keyword::Number,    Keyword::Series,       Keyword::Address, Keyword::Month,
+            Keyword::Publisher, Keyword::Organization, Keyword::Note,    Keyword::Key
+        }
+    },
+    {
+        Type::TechReport,
+        {
+            Keyword::Author, Keyword::Title,  Keyword::Institution, Keyword::Year,
+            Keyword::Type,   Keyword::Number, Keyword::Address,     Keyword::Month,
+            Keyword::Note,   Keyword::Key
+        }
+    },
+    {
+        Type::Unpublished,
+        {
+            Keyword::Author, Keyword::Title, Keyword::Note, Keyword::Month,
+            Keyword::Year,   Keyword::Key
+        }
+    }
+};
+
 struct Entry {
     std::string& operator[](Keyword keyword) {
         switch (keyword) {
@@ -229,10 +339,11 @@ struct Entry {
     std::string year;
 };
 
-void checkCompleteness(const Entry& entry) {
+std::vector<std::string> checkCompleteness(const Entry& entry) {
     auto checkRequired = [](const Entry& entry,
                             std::vector<Keyword> keywords,
                             std::vector<std::pair<Keyword, Keyword>> keywordPairs = {})
+        -> std::vector<std::string>
     {
         auto keywordToString = [](Keyword keyword) -> std::string {
             switch (keyword) {
@@ -281,13 +392,13 @@ void checkCompleteness(const Entry& entry) {
         }
 
         if (failed) {
-            std::cerr << "Failed: " << entry.citeKey << '\n';
+            std::vector<std::string> result;
             std::for_each(
                 keywords.begin(),
                 keywords.end(),
-                [entry, keywordToString](Keyword k) { 
+                [&result, entry, keywordToString](Keyword k) { 
                     if (entry[k].empty()) {
-                        std::cerr << "\tMissing: " << keywordToString(k) << '\n';
+                        result.push_back(keywordToString(k));
                     }
                 }
             );
@@ -295,90 +406,84 @@ void checkCompleteness(const Entry& entry) {
             std::for_each(
                 keywordPairs.begin(),
                 keywordPairs.end(),
-                [entry, keywordToString](const std::pair<Keyword, Keyword>& p) {
+                [&result, entry, keywordToString](const std::pair<Keyword, Keyword>& p) {
                     if (entry[p.first].empty() || entry[p.second].empty()) {
-                        std::cerr << "\tMissing: " << keywordToString(p.first) <<
-                                     " or " << keywordToString(p.second) << '\n';
-
+                        result.push_back(
+                            keywordToString(p.first) + " or " + keywordToString(p.second)
+                        );
                     }
                 }
             );
+            return result;
+        }
+        else {
+            return {};
         }
     };
     switch (entry.entryType) {
         case Type::Article:
-            checkRequired(
+            return checkRequired(
                 entry,
                 { Keyword::Author, Keyword::Title, Keyword::Journal, Keyword::Year,
                   Keyword::Volume }
             );
-            break;
         case Type::Book:
-            checkRequired(
+            return checkRequired(
                 entry,
                 { Keyword::Title, Keyword::Publisher, Keyword::Year },
                 { { Keyword::Author, Keyword::Editor } }
             );
-            break;
         case Type::Booklet:
-            checkRequired(entry, { Keyword::Title });
-            break;
+            return checkRequired(entry, { Keyword::Title });
         case Type::InBook:
-            checkRequired(
+            return checkRequired(
                 entry,
                 { Keyword::Title, Keyword::Publisher, Keyword::Year },
                 { { Keyword::Author, Keyword::Editor },
                   { Keyword::Chapter, Keyword::Pages } }
             );
-            break;
         case Type::InCollection:
-            checkRequired(
+            return checkRequired(
                 entry,
                 { Keyword::Author, Keyword::Title, Keyword::BookTitle, Keyword::Publisher,
-                  Keyword::Year}
+                  Keyword::Year }
             );
-            break;
         case Type::InProceedings:
-            checkRequired(
+            return checkRequired(
                 entry,
-                { Keyword::Author, Keyword::Title, Keyword::BookTitle, Keyword::Year}
+                { Keyword::Author, Keyword::Title, Keyword::BookTitle, Keyword::Year }
             );
-            break;
         case Type::Manual:
-            checkRequired(entry, { Keyword::Title });
-            break;
+            return checkRequired(entry, { Keyword::Title });
         case Type::MastersThesis:
-            checkRequired(
+            return checkRequired(
                 entry,
                 { Keyword::Author, Keyword::Title, Keyword::School, Keyword::Year }
             ); 
-            break;
         case Type::Misc:
-            break;
+            return {};
         case Type::PhDThesis:
-            checkRequired(
+            return checkRequired(
                 entry,
                 { Keyword::Author, Keyword::Title, Keyword::School, Keyword::Year }
             );
-            break;
         case Type::Proceedings:
-            checkRequired(
+            return checkRequired(
                 entry,
                 { Keyword::Title, Keyword::Year }
             );
-            break;
         case Type::TechReport:
-            checkRequired(
+            return checkRequired(
                 entry,
                 { Keyword::Author, Keyword::Title, Keyword::Institution, Keyword::Year }
             );
-            break;
         case Type::Unpublished:
-            checkRequired(
+            return checkRequired(
                 entry,
                 { Keyword::Author, Keyword::Title, Keyword::Note}
             );
-            break;
+        default:
+            return {};
     }
 }
 
@@ -410,6 +515,7 @@ int main(int argc, char** argv) {
         std::string reference = match.str();
 
         Entry entry;
+        std::vector<std::string> extraFields;
 
         size_t firstBracket = reference.find_first_of('{');
 
@@ -464,8 +570,21 @@ int main(int argc, char** argv) {
             // Remove the "" or {} pair around the value
             value = value.substr(1, value.size() - 2);
 
+            Keyword kw = keywordFromString(keyword);
+            
+            std::vector<Keyword> accepted = AcceptedKeywords.at(entry.entryType);
+            bool keywordAllowed = std::find(
+                accepted.begin(),
+                accepted.end(),
+                kw
+            ) != accepted.end();
 
-            entry[keywordFromString(keyword)] = value;
+            if (keywordAllowed) {
+                entry[keywordFromString(keyword)] = value;
+            }
+            else {
+                extraFields.push_back(keyword);
+            }
 
 
             if (endLine == std::string::npos) {
@@ -474,7 +593,25 @@ int main(int argc, char** argv) {
             reference = reference.substr(endLine + 1 + 1); // ,\n  or \n}
         }
 
-        checkCompleteness(entry);
+
+        std::vector<std::string> errors = checkCompleteness(entry);
+
+        if (!extraFields.empty() || !errors.empty()) {
+            std::cerr << "Error in: " << entry.citeKey << '\n';
+
+            for (const std::string& missing : errors) {
+                std::cerr << "Missing: " << missing << '\n';
+            }
+
+            std::cerr << '\n';
+
+            for (const std::string& extra : extraFields) {
+                std::cerr << "Extra:   " << extra << '\n';
+            }
+
+            std::cerr << '\n' << '\n';
+        }
+
         entries.push_back(std::move(entry));
 
         contents = match.suffix();
