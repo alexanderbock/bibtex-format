@@ -77,8 +77,6 @@ Type typeFromString(const std::string& type) {
     if (type == "proceedings") {    return Type::Proceedings;   }
     if (type == "techreport") {     return Type::TechReport;    }
     if (type == "unpublished") {    return Type::Unpublished;   }
-
-    std::cerr << "Unknown type: " << type << "\n";
     return Type::Unknown;
 }
 
@@ -135,8 +133,6 @@ Keyword keywordFromString(const std::string& keyword) {
     if (keyword == "url") {             return Keyword::Url;            }
     if (keyword == "volume") {          return Keyword::Volume;         }
     if (keyword == "year") {            return Keyword::Year;           }
-
-    std::cerr << "Unknown keyword: " << keyword << "\n";
     return Keyword::Unknown;
 }
 
@@ -146,7 +142,7 @@ const std::map<Type, std::vector<Keyword>> AcceptedKeywords = {
         {   
             Keyword::Author, Keyword::Title,  Keyword::Journal, Keyword::Year, 
             Keyword::Volume, Keyword::Number, Keyword::Pages,   Keyword::Month,
-            Keyword::Note,   Keyword::Key
+            Keyword::Note,   Keyword::Key,    Keyword::Doi
         }
     },
     {
@@ -155,7 +151,7 @@ const std::map<Type, std::vector<Keyword>> AcceptedKeywords = {
             Keyword::Title,   Keyword::Publisher, Keyword::Year,   Keyword::Author,
             Keyword::Editor,  Keyword::Volume,    Keyword::Number, Keyword::Series,
             Keyword::Address, Keyword::Edition,   Keyword::Month,  Keyword::Note,
-            Keyword::Key,     Keyword::Url
+            Keyword::Key,     Keyword::Url,       Keyword::Doi
         }
     },
     {
@@ -163,6 +159,7 @@ const std::map<Type, std::vector<Keyword>> AcceptedKeywords = {
         {
             Keyword::Title, Keyword::Author, Keyword::HowPublished, Keyword::Address, 
             Keyword::Month, Keyword::Year,   Keyword::Note,         Keyword::Key,
+            Keyword::Doi
         }
     },
     {
@@ -171,7 +168,8 @@ const std::map<Type, std::vector<Keyword>> AcceptedKeywords = {
             Keyword::Title,     Keyword::Publisher, Keyword::Year,  Keyword::Author,
             Keyword::Editor,    Keyword::Chapter,   Keyword::Pages, Keyword::Volume,   
             Keyword::Number,    Keyword::Series,    Keyword::Type,  Keyword::Address,
-            Keyword::Edition,   Keyword::Month,     Keyword::Note,  Keyword::Key
+            Keyword::Edition,   Keyword::Month,     Keyword::Note,  Keyword::Key,
+            Keyword::Doi
         }
     },
     {
@@ -181,7 +179,7 @@ const std::map<Type, std::vector<Keyword>> AcceptedKeywords = {
             Keyword::Year,    Keyword::Editor,  Keyword::Volume,    Keyword::Number,   
             Keyword::Series,  Keyword::Type,    Keyword::Chapter,   Keyword::Pages,
             Keyword::Address, Keyword::Edition, Keyword::Month,     Keyword::Note,
-            Keyword::Key
+            Keyword::Key,     Keyword::Doi
         }
     },
     {
@@ -190,7 +188,7 @@ const std::map<Type, std::vector<Keyword>> AcceptedKeywords = {
             Keyword::Author,    Keyword::Title,   Keyword::BookTitle, Keyword::Year,
             Keyword::Editor,    Keyword::Volume,  Keyword::Number,    Keyword::Series,
             Keyword::Pages,     Keyword::Address, Keyword::Month,   Keyword::Organization,
-            Keyword::Publisher, Keyword::Note,    Keyword::Key
+            Keyword::Publisher, Keyword::Note,    Keyword::Key,       Keyword::Doi
         }
     },
     {
@@ -198,7 +196,7 @@ const std::map<Type, std::vector<Keyword>> AcceptedKeywords = {
         {
             Keyword::Title,   Keyword::Author, Keyword::Organization, Keyword::Address,
             Keyword::Edition, Keyword::Month,  Keyword::Year,         Keyword::Note,
-            Keyword::Key
+            Keyword::Key,     Keyword::Doi
         }
     },
     {
@@ -206,14 +204,14 @@ const std::map<Type, std::vector<Keyword>> AcceptedKeywords = {
         {
             Keyword::Author, Keyword::Title,   Keyword::School, Keyword::Year,
             Keyword::Type,   Keyword::Address, Keyword::Month,  Keyword::Note,
-            Keyword::Key
+            Keyword::Key,    Keyword::Doi
         }
     },
     {
         Type::Misc,
         {
             Keyword::Author, Keyword::Title, Keyword::HowPublished, Keyword::Month,
-            Keyword::Year,   Keyword::Note,  Keyword::Key
+            Keyword::Year,   Keyword::Note,  Keyword::Key,          Keyword::Doi
         }
     },
     {
@@ -221,7 +219,7 @@ const std::map<Type, std::vector<Keyword>> AcceptedKeywords = {
         {
             Keyword::Author, Keyword::Title, Keyword::School, Keyword::Year,
             Keyword::Type,   Keyword::Address, Keyword::Month,  Keyword::Note,
-            Keyword::Key
+            Keyword::Key,    Keyword::Doi
         }
     },
     {
@@ -229,7 +227,8 @@ const std::map<Type, std::vector<Keyword>> AcceptedKeywords = {
         {
             Keyword::Title,    Keyword::Year,          Keyword::Editor,  Keyword::Volume,
             Keyword::Number,    Keyword::Series,       Keyword::Address, Keyword::Month,
-            Keyword::Publisher, Keyword::Organization, Keyword::Note,    Keyword::Key
+            Keyword::Publisher, Keyword::Organization, Keyword::Note,    Keyword::Key,
+            Keyword::Doi
         }
     },
     {
@@ -237,14 +236,14 @@ const std::map<Type, std::vector<Keyword>> AcceptedKeywords = {
         {
             Keyword::Author, Keyword::Title,  Keyword::Institution, Keyword::Year,
             Keyword::Type,   Keyword::Number, Keyword::Address,     Keyword::Month,
-            Keyword::Note,   Keyword::Key
+            Keyword::Note,   Keyword::Key,    Keyword::Doi
         }
     },
     {
         Type::Unpublished,
         {
             Keyword::Author, Keyword::Title, Keyword::Note, Keyword::Month,
-            Keyword::Year,   Keyword::Key
+            Keyword::Year,   Keyword::Key,   Keyword::Doi
         }
     }
 };
@@ -525,6 +524,12 @@ int main(int argc, char** argv) {
         size_t firstComma = reference.find_first_of(',', firstBracket);
         entry.citeKey = reference.substr(firstBracket + 1, firstComma - firstBracket - 1);
 
+        if (entry.entryType == Type::Unknown) {
+            std::cerr << "Error in: " << entry.citeKey << '\n';
+            std::cerr << "Unknown type: " << typeInfo << "\n";
+
+        }
+
         reference = reference.substr(firstComma + 1 + 1); // ,\n
         while (!reference.empty()) {
             // Removes whitespaces from the front and the end of the string
@@ -571,6 +576,8 @@ int main(int argc, char** argv) {
             value = value.substr(1, value.size() - 2);
 
             Keyword kw = keywordFromString(keyword);
+            // No need to check for keywords as they will be added to the 'extraFields'
+            // vector either way
             
             std::vector<Keyword> accepted = AcceptedKeywords.at(entry.entryType);
             bool keywordAllowed = std::find(
@@ -602,8 +609,6 @@ int main(int argc, char** argv) {
             for (const std::string& missing : errors) {
                 std::cerr << "Missing: " << missing << '\n';
             }
-
-            std::cerr << '\n';
 
             for (const std::string& extra : extraFields) {
                 std::cerr << "Extra:   " << extra << '\n';
