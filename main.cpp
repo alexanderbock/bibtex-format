@@ -348,7 +348,7 @@ std::vector<std::string> checkCompleteness(const Entry& entry) {
             switch (keyword) {
                 case Keyword::Address:      return "address";
                 case Keyword::Author:       return "author";
-                case Keyword::BookTitle:    return "bookTitle";
+                case Keyword::BookTitle:    return "booktitle";
                 case Keyword::Chapter:      return "chapter";
                 case Keyword::Doi:          return "doi";
                 case Keyword::Edition:      return "edition";
